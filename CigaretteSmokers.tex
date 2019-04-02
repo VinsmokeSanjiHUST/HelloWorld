@@ -1,0 +1,477 @@
+\newpage
+\section{Bài toán người hút thuốc}
+\subsection{Phát biểu bài toán}
+\begin{itemize}
+	\item Có một cửa hàng và 3 người hút thuốc lá
+	\item Một người cần có đủ 3 nguyên liệu sau để có thể hút thuốc: thuốc lá, giấy và diêm
+	\item Cửa hàng có thể cung cấp một số lượng không giới hạn các nguyên liệu này.
+	\item Mỗi một người trong 3 người hút thuốc có một số lượng không giới hạn một trong 3 nguyên liệu trên, nghĩa là một người có thuốc lá, một người có giấy và một người có diêm.
+	\item Cửa hàng thực hiện lặp lại công việc sau: chọn ngẫu nhiên ra 2 loại nguyên liệu khác nhau và bán nó cho người hút thuốc cần 2 loại nguyên liệu này (ví dụ nếu cửa hàng chọn diêm và giấy thì cửa hàng sẽ bán nó cho người có thuốc lá).
+\end{itemize}
+\subsection{Ý nghĩa của bài toán}
+Bài toán người hút thuốc là một trong những bài toán kinh điển về vấn đề đồng bộ hóa tiến trình. Nó là sự mô hình hóa của một vấn đề thực tế đó là việc phân phối tài nguyên cần thiết cho các tiến trình. Trong thực tế, việc phân phối tài nguyên cho các tiến trình có thể xảy ra tình huống sau đây:
+\begin{itemize}
+	\item Có một số tiến trình đang chờ hệ thống cấp phát tài nguyên.
+	\item Nếu lượng tài nguyên sẵn có trong hệ thống là có thể cung cấp được cho một số tiến trình, hệ thống cần đánh thức các tiến trình này để chúng tiếp tục thực hiện. Ngược lại, đối với các tiến trình không thể hoạt động với lượng tài nguyên sẵn có, cần phải tránh việc đánh thức chúng.
+	\item Bài toán đặt ra là phải lựa chọn các tiến trình phù hợp để đánh thức.
+\end{itemize}
+Đây chính là tiền đề dẫn đến bài toán người hút thuốc. Có thể thấy rõ sự tương ứng giữa vấn đề trong thực tế với bài toán này:
+\begin{itemize}
+	\item Cửa hàng đại diện cho hệ điều hành, tức thành phần phân phối tài nguyên.
+	\item 3 người hút thuốc đại diện cho các tiến trình trong hệ thống yêu cầu các tài nguyên khác nhau.
+\end{itemize}
+\subsection{Các phiên bản của bài toán}
+\begin{enumerate}
+	\item Phiên bản "không thể" (impossible version): Suhas Patil là người đã đặt ra các ràng buộc cho phiên bản này, đó là:
+	\begin{itemize} 
+		\item Thứ nhất, không được thay đổi mã nguồn của tiến trình cửa hàng. 
+		\item Thứ hai, không được sử dụng các câu lệnh điều kiện hay một mảng các đèn báo.
+	\end{itemize}
+	Với 2 ràng buộc này, rất nhiều vấn đề trở nên không thể giải quyết được.
+	\item Phiên bản "thú vị" (interesting version): Tương tự như phiên bản phía trên, nhưng không có ràng buộc thứ hai.
+	\item Phiên bản tầm thường (trivial version): Trong một số sách, bài toán quy định rằng cửa hàng sẽ biết trước về nhu cầu của những người hút thuốc và chọn ra người phù hợp để cung cấp nguyên liệu. Rõ ràng điều này là không thực tế trong cả trường hợp của một người bán hàng thực sự và trường hợp của hệ điều hành. Nó khiến cho việc các tiến trình đòi hỏi tài nguyên khác nhau không còn ý nghĩa bởi hệ điều hành luôn dựa vào yêu cầu của tiến trình để cung cấp chính xác những gì mà tiến trình đòi hỏi. Đồng thời, đối với phiên bản này, bài toán trở nên quá dễ để giải quyết, đó là lý do phiên bản này có tên là phiên bản tầm thường, hay phiên bản không thú vị.
+\end{enumerate}
+\subsection{Giải quyết bài toán}
+Dựa trên những nhận xét trên, chúng ta sẽ chỉ tập trung xem xét phiên bản "thú vị" của bài toán người hút thuốc. Để thỏa mãn ràng buộc của bài toán, chúng ta cần phải xác định mã nguồn của tiến trình cửa hàng. Cửa hàng sẽ sử dụng các đèn báo sau đây:
+\textsf{
+\begin{center}
+\begin{minipage}[t]{.33\linewidth}
+    \begin{center}
+        {\large\bfseries Agent semaphores}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+        agentSem = Semaphore(1)\\
+        tobacco = Semaphore(0)\\
+        paper = Semaphore(0)\\
+        match = Semaphore(0)
+    \end{minipage}
+    }
+\end{minipage}
+\end{center}
+}
+
+\noindent Tiến trình cửa hàng thực chất bao gồm 3 tiến trình:
+\begin{itemize}
+    \item Tiến trình A sản xuất thuốc lá và giấy.
+    \item Tiến trình B sản xuất giấy và diêm.
+    \item Tiến trình C sản xuất thuốc lá và diêm.
+\end{itemize}
+Mỗi khi tiến trình cửa hàng hoạt động, chỉ có một trong 3 tiến trình A, B, C được phép hoạt động. Do đó, chúng ta sử dụng đèn báo {\tt agentSem} để điều phối hoạt động của 3 tiến trình này. Mỗi khi đèn báo {\tt agentSem} được {\tt signal}, một trong 3 tiến trình A, B, C sẽ được đánh thức và sản xuất 2 loại nguyên liệu tương ứng bằng cách {\tt signal} 2 trong số 3 đèn báo: {\tt tobacco, paper, matches} tương ứng với tiến trình đó.\\[10pt]
+\textsf{
+\begin{minipage}[t]{.2\linewidth}
+    \begin{center}
+        {\bfseries Cửa hàng A}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}agentSem.wait()\\
+        \hspace*{10pt}tobacco.signal()\\
+        \hspace*{10pt}paper.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.2\linewidth}
+    \begin{center}
+        {\bfseries Cửa hàng B}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}agentSem.wait()\\
+        \hspace*{10pt}paper.signal()\\
+        \hspace*{10pt}match.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.2\linewidth}
+    \begin{center}
+        {\bfseries Cửa hàng C}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}agentSem.wait()\\
+        \hspace*{10pt}paper.signal()\\
+        \hspace*{10pt}match.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+}\\[10pt]
+
+\noindent Đối với các tiến trình người hút thuốc, công việc cần thực hiện của các tiến trình này là: 
+\begin{itemize}
+    \item Chờ nguyên liệu thứ nhất.
+    \item Chờ nguyên liệu thứ hai
+    \item Hút thuốc
+\end{itemize}
+Ở đây, chúng ta có 2 khả năng cần được xem xét:
+\begin{itemize}
+    \item Thứ nhất, cửa hàng chờ tiến trình người hút thuốc nhận được nguyên liệu mới tiếp tục sản xuất nguyên liệu.
+    \item Thứ hai, cửa hàng luôn sản xuất nguyên liệu mà không cần quan tâm đến việc người hút thuốc đã nhận được nguyên liệu hay chưa.
+\end{itemize}
+
+\subsubsection{Trường hợp 1: Cửa hàng chờ người hút thuốc}
+Trong trường hợp này, tiến trình người hút thuốc cần làm thêm một công việc đó là đánh thức tiến trình cửa hàng mỗi khi nó thực hiện xong. Mã nguồn của tiến trình người hút thuốc chỉ đơn giản như sau:\\[10pt]
+\textsf{
+\begin{minipage}[t]{.25\linewidth}
+    \begin{center}
+        {\bfseries Người có diêm}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}tobacco.wait()\\
+        \hspace*{10pt}paper.wait()\\
+        \hspace*{10pt}agentSem.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.25\linewidth}
+    \begin{center}
+        {\bfseries Người có thuốc}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}paper.wait()\\
+        \hspace*{10pt}match.wait()\\
+        \hspace*{10pt}agentSem.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.25\linewidth}
+    \begin{center}
+        {\bfseries Người có giấy}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}tobacco.wait()\\
+        \hspace*{10pt}match.wait()\\
+        \hspace*{10pt}agentSem.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+}\\[10pt]
+
+Chúng ta có thể thấy rằng, giải pháp này có khả năng gây ra bế tắc. Giả sử tiến trình {\sf\bfseries Cửa hàng A} được gọi đầu tiên, nó sẽ sản xuất ra thuốc và giấy. Lúc này, cả hai tiến trình {\sf\bfseries người có thuốc} và {\sf\bfseries người có giấy} cùng hoạt động. Tiến trình {\sf\bfseries người có thuốc} lấy được giấy và tiến trình {\sf\bfseries người có giấy} lấy được thuốc. Nhưng sau đó, cả 2 tiến trình này cùng bị chặn do không lấy được diêm. Trong khi đó, tiến trình {\sf\bfseries người có diêm} cũng bị chặn vì thuốc và giấy đã bị 2 tiến trình kia chiếm mất. Do cả 3 tiến trình người hút thuốc đều không thể kết thúc, đèn báo {\tt agentSem} không được giải phóng và tiến trình cửa hàng cũng bị chặn, hệ thống rơi vào trạng thái bế tắc. 
+
+Giải pháp đưa ra ở đây là sử dụng thêm 3 tiến trình hỗ trợ. Tưởng tượng rằng mỗi khi cửa hàng sản xuất ra nguyên liệu, nó đem đặt các nguyên liệu sản xuất lên một chiếc bàn. Mỗi một tiến trình hỗ trợ sẽ thực hiện công việc đặt một loại sản phẩm nhất định lên trên bàn. Giả sử tiến trình {\sf\bfseries Pusher A} thực hiện công việc đặt thuốc lá lên bàn. Nếu nó thấy trên bàn đã có diêm hoặc giấy, nó sẽ lấy một trong hai nguyên liệu này kết hợp với thuốc lá mà nó mang đến để đưa cho người phù hợp. Ngược lại, nó sẽ chỉ đặt thuốc lên bàn. Tương tự, các tiến trình {\sf\bfseries Pusher B} và {\sf\bfseries Pusher C} làm các công việc đặt diêm và giấy lên bàn. Để thực hiện lời giải pháp này, chúng ta cần sử dụng thêm một số biến và đèn báo sau:
+\noindent\textsf{
+\begin{center}
+\fcolorbox{black}{light-gray}{
+\begin{minipage}[t]{.44\linewidth}
+    isTobacco = isPaper = isMatch = false\\
+    tobaccoSem = Semaphore(0)\\
+    paperSem = Semaphore(0)\\
+    matchSem = Semaphore(0)\\
+    mutex = Semaphore(1)
+\end{minipage}}
+\end{center}
+}
+Các biến logic {\tt isTobacco, isPaper, isMatch} dùng để xác định xem các nguyên liệu tương ứng đã có ở trên bàn hay chưa. Các đèn báo {\tt tobaccoSem, paperSem, matchSem} dùng để đánh thức các tiến trình người hút thuốc tương ứng. Bây giờ, các tiến trình người hút thuốc không chờ 2 nguyên liệu còn thiếu mà chờ tín hiệu từ đèn báo tương ứng. Cũng cần lưu ý rằng, tại mỗi thời điểm, chỉ một trong 3 tiến trình hỗ trợ được phép hoạt động nếu không sẽ dẫn đến mất kiểm soát, do đó đèn báo {\tt mutex} được sử dụng. Mã nguồn của 3 tiến trình hỗ trợ và 3 tiến trình người hút thuốc được viết như sau:\\[7pt]
+\noindent\textsf{
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Pusher A}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}tobacco.wait()\\
+        \hspace*{10pt}mutex.wait()\\
+        \hspace*{20pt}if (isPaper)\{\\
+        \hspace*{30pt}isPaper = false\\
+        \hspace*{30pt}matchSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else if (isMatch)\{\\
+        \hspace*{30pt}isMatch = false\\
+        \hspace*{30pt}paperSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else\\
+        \hspace*{30pt}isTobacco = true\\
+        \hspace*{10pt}mutex.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Pusher B}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}match.wait()\\
+        \hspace*{10pt}mutex.wait()\\
+        \hspace*{20pt}if (isPaper)\{\\
+        \hspace*{30pt}isPaper = false\\
+        \hspace*{30pt}tobaccoSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else if (isTobacco)\{\\
+        \hspace*{30pt}isTobacco = false\\
+        \hspace*{30pt}paperSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else\\
+        \hspace*{30pt}isMatch = true\\
+        \hspace*{10pt}mutex.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Pusher C}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}paper.wait()\\
+        \hspace*{10pt}mutex.wait()\\
+        \hspace*{20pt}if (isTobacco)\{\\
+        \hspace*{30pt}isTobacco = false\\
+        \hspace*{30pt}matchSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else if (isMatch)\{\\
+        \hspace*{30pt}isMatch = false\\
+        \hspace*{30pt}tobaccoSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else\\
+        \hspace*{30pt}isPaper = true\\
+        \hspace*{10pt}mutex.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}\\[10pt]
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Người có diêm}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}matchSem.wait()\\
+        \hspace*{10pt}makeCigarette()\\
+        \hspace*{10pt}agentSem.signal()\\
+        \hspace*{10pt}smoke()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Người có thuốc}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}tobaccoSem.wait()\\
+        \hspace*{10pt}makeCigarette()\\
+        \hspace*{10pt}agentSem.signal()\\
+        \hspace*{10pt}smoke()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Người có giấy}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}paperSem.wait()\\
+        \hspace*{10pt}makeCigarette()\\
+        \hspace*{10pt}agentSem.signal()\\
+        \hspace*{10pt}smoke()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+}\\[7pt]
+Như vậy, với việc thêm vào 3 tiến trình hỗ trợ, chúng ta đã giải quyết được bài toán người hút thuốc.
+\subsubsection{Trường hợp 2: Cửa hàng không chờ người hút thuốc}
+Đây là trường hợp tổng quát hơn của trường hợp 1. Ở đây, thay vì sử dụng các biến logic {\tt isTobacco, isPaper, isMatch}, chúng ta sẽ sử dụng các biến kiểu nguyên {\tt numTobacco, numPaper, numMatch}. Các biến này dùng để chỉ ra số lượng mỗi loại nguyên liệu có trên bàn. Ở đây, thay vì tưởng tượng các tiến trình hỗ trợ đặt nguyên liệu lên bàn, ta có thể tưởng tượng rằng các tiến trình đang ghi điểm vào một bảng điểm có 3 cột. Trong trường hợp này, các tiến trình hỗ trợ có hành vi giống hệt ở trườn hợp 1, chỉ khác là ở trong bảng điểm, số lượng các loại nguyên liệu có thể lớn hơn 1. Mỗi khi cửa hàng sản xuất xong, đèn báo {\tt agentSem} sẽ được giải phóng ngay chứ không phải đợi một trong số các tiến trình người hút thuốc giải phóng. Mã nguồn của toàn bộ bài toán được tổng hợp lại như sau:\\[7pt]
+\noindent\textsf{
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Cửa hàng A}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}agentSem.wait()\\
+        \hspace*{10pt}tobacco.signal()\\
+        \hspace*{10pt}paper.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Cửa hàng B}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}agentSem.wait()\\
+        \hspace*{10pt}paper.signal()\\
+        \hspace*{10pt}match.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Cửa hàng C}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}agentSem.wait()\\
+        \hspace*{10pt}paper.signal()\\
+        \hspace*{10pt}match.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}\\[5pt]
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Pusher A}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}tobacco.wait()\\
+        \hspace*{10pt}mutex.wait()\\
+        \hspace*{20pt}if (numPaper > 0)\{\\
+        \hspace*{30pt}numPaper-\--\\
+        \hspace*{30pt}matchSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else if (numMatch > 0)\{\\
+        \hspace*{30pt}numMatch-\--\\
+        \hspace*{30pt}paperSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else\\
+        \hspace*{30pt}numTobacco++\\
+        \hspace*{10pt}mutex.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Pusher B}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}match.wait()\\
+        \hspace*{10pt}mutex.wait()\\
+        \hspace*{20pt}if (numPaper > 0)\{\\
+        \hspace*{30pt}numPaper-\--\\
+        \hspace*{30pt}tobaccoSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else if (numTobacco > 0)\{\\
+        \hspace*{30pt}numTobacco-\--\\
+        \hspace*{30pt}paperSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else\\
+        \hspace*{30pt}numMatch++\\
+        \hspace*{10pt}mutex.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Pusher C}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}paper.wait()\\
+        \hspace*{10pt}mutex.wait()\\
+        \hspace*{20pt}if (numTobacco > 0)\{\\
+        \hspace*{30pt}numTobacco-\--\\
+        \hspace*{30pt}matchSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else if (numMatch > 0)\{\\
+        \hspace*{30pt}numMatch-\--\\
+        \hspace*{30pt}tobaccoSem.signal()\\
+        \hspace*{20pt}\}\\
+        \hspace*{20pt}else\\
+        \hspace*{30pt}numPaper++\\
+        \hspace*{10pt}mutex.signal()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}\\[10pt]
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Người có diêm}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}matchSem.wait()\\
+        \hspace*{10pt}makeCigarette()\\
+        \hspace*{10pt}agentSem.signal()\\
+        \hspace*{10pt}smoke()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Người có thuốc}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}tobaccoSem.wait()\\
+        \hspace*{10pt}makeCigarette()\\
+        \hspace*{10pt}agentSem.signal()\\
+        \hspace*{10pt}smoke()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.29\linewidth}
+    \begin{center}
+        {\bfseries Người có giấy}
+    \end{center}
+    \fcolorbox{black}{light-gray}{
+    \begin{minipage}[t]{\linewidth}
+    do\{\\
+        \hspace*{10pt}paperSem.wait()\\
+        \hspace*{10pt}makeCigarette()\\
+        \hspace*{10pt}agentSem.signal()\\
+        \hspace*{10pt}smoke()\\
+    \}while(1)
+    \end{minipage}
+    }
+\end{minipage}
+}

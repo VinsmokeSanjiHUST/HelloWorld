@@ -1,0 +1,144 @@
+\newpage
+\section{Bài toán ông già Noel}
+\subsection{Phát biểu bài toán}
+\begin{itemize}
+	\item Có một ông già Noel, 9 chú tuần lộc và vô số yêu tinh.
+	\item Giả sử ban đầu, ông già Noel đang ngủ tại cửa hàng đồ chơi ở Bắc Cực, 9 chú tuần lộc đang ở vùng nhiệt đới phía Nam, các yêu tinh đang làm đồ chơi tại cửa hàng.
+	\item Ông già Noel chỉ được đánh thức khi có một trong 2 điều kiện
+	\begin{itemize}
+		\item Có 3 yêu tinh gặp khó khăn trong khi làm đồ chơi và cần ông già Noel giúp đỡ.
+		\item Cả 9 chú tuần lộc đều đã trở về Bắc cực.
+	\end{itemize}
+	\item Nếu cả 9 chú tuần lộc đều trở về và đồng thời có 3 yêu tinh cần giúp đỡ thì ông già Noel ưu tiên việc chuẩn bị xe trượt tuyết hơn; các yêu tinh phải đợi đến khi xe tuyết được chuẩn bị xong.
+	\item Khi có 3 yêu tinh đợi sự giúp đỡ của ông già Noel, các yêu tinh khác cần đến sự giúp đỡ của ông già Noel phải chờ cho đến khi 3 yêu tinh kia trở về.
+	\item Khi chú tuần lộc thứ 9 chưa đến, các chú tuần lộc khác phải đợi mà không được đánh thức ông già Noel.
+	\item Hoạt động của ông già Noel được đặt trong một vòng lặp vô hạn để giải quyết được nhiều vấn đề nhất có thể. Trong khi đó, các chú tuần lộc không muốn trở về Bắc cực và chỉ trở về khi không còn lựa chọn nào khác, còn các yêu tinh không phải luôn luôn cần đến sự giúp đỡ của ông già Noel.
+\end{itemize}
+\subsection{Ý nghĩa của bài toán}
+Bài toán ông già Noel thuộc lớp bài toán ít kinh điển hơn về đồng bộ tiến trình. Bài toán này thuộc kiểu hình mẫu bài toán barrier, trong đó một tổ hợp các tiến trình được phép đi qua barrier có độ ưu tiên cao hơn một tổ hợp khác. Đây là vấn đề xảy ra trong thực tế, ví dụ:
+\begin{itemize}
+	\item Trong hệ thống có một số tiến trình chỉ được phép hoạt động khi có đồng thời một số lượng nhất định các tiến trình cùng loại.
+	\item Khi số lượng tiến trình cần thiết để hoạt động chưa đủ, các tiến trình đến trước phải chờ. 
+	\item Nếu tất cả các tiến trình đều đang chờ, hệ điều hành tạm thời không hoạt động (thực tế hệ điều hành luôn luôn hoạt động, ta chỉ giả sử trong hệ thống lúc này chỉ có các tiến trình đang chờ).
+	\item Các tiến trình thuộc các kiểu khác nhau có độ ưu tiên khác nhau và hệ điều hành sẽ phục vụ các tiến trình có độ ưu tiên cao hơn trước.
+\end{itemize}
+Vấn đề nêu trên được ánh xạ qua bài toán ông già Noel với sự tương ứng như sau:
+\begin{itemize}
+	\item Ông già Noel đại diện cho hệ điều hành.
+	\item Yêu tinh đại diện cho kiểu tiến trình có độ ưu tiên thấp.
+	\item Tuần lộc đại diện cho kiểu tiến trình có độ ưu tiên cao.
+	\item Số lượng tiến trình loại tuần lộc được phép hoạt động là 9 và số lượng tiến trình loại yêu tinh được phép hoạt động là 3.
+\end{itemize}
+\subsection{Giải quyết bài toán}
+Để giải quyết bài toán, ta sẽ sử dụng các biến và đèn báo sau đây:
+\textsf{
+\begin{center}
+\fcolorbox{black}{light-gray}{
+\begin{minipage}[t]{.33\linewidth}
+	elves = 0\\
+	reindeer = 0\\
+	santaSem = Semaphore(0)\\
+	reindeer = Semaphore(0)\\
+	elfTex = Semaphore(1)\\
+	mutex = Semaphore(1)
+\end{minipage}}
+\end{center}
+}
+\begin{itemize}
+	\item {\tt elves} và {\tt reindeer} là các biến đếm để đếm số lượng yêu tinh và tuần lộc đang chờ ông già Noel. Cả 2 biến đếm này đều được bảo về bởi đèn báo {\tt mutex}.
+	\item Ông già Noel đợi ở đèn báo {\tt santaSem} trước khi được đánh thức bởi 9 chú tuần lộc hoặc 3 yêu tinh.
+	\item Các chú tuần lộc đến trước đợi ở đèn báo {\tt reindeer} và chỉ được đánh thức bởi ông già Noel khi chú tuần lộc thứ 9 đánh thức ông già Noel.
+	\item  Đèn báo {\tt elfTex} được sử dụng để ngăn chặn các yêu tinh khác khi có 3 yêu tinh đang được ông già Noel giúp đỡ.
+\end{itemize}
+\subsubsection{Tiến trình ông già Noel}
+Ông già Noel chỉ phải thực hiện các công việc sau:
+\begin{itemize}
+	\item Đợi cho đến khi được đánh thức.
+	\item Nếu được đánh thức, kiểm tra xem số lượng tuần lộc đã đủ 9 hay chưa. Nếu đủ, ông già Noel sẽ đi chuẩn bị xe trượt tuyết. Ngược lại, ông già Noel sẽ giúp đỡ 3 yêu tinh.
+	\item Lặp lại 2 công việc trên.
+\end{itemize}
+Mã nguồn của tiến trình ông già Noel được viết như sau:
+\textsf{
+\begin{center}
+\begin{minipage}[t]{.33\linewidth}
+	\begin{center}
+		{\bfseries Santa Claus's code}
+	\end{center}
+	\fcolorbox{black}{light-gray}{
+	\begin{minipage}[t]{\linewidth}
+		do\{\\
+		\hspace*{10pt}santaSem.wait()\\
+		\hspace*{10pt}mutex.wait()\\
+		\hspace*{20pt}if (reindeer == 9)\{\\
+		\hspace*{30pt}prepareSleigh()\\
+		\hspace*{30pt}reindeerSem.signal(9)\\
+		\hspace*{30pt}reindeer -= 9\\
+		\hspace*{20pt}else\\
+		\hspace*{30pt}helpElves()\\
+		\hspace*{10pt}mutex.signal()\\
+		\}while(1)
+	\end{minipage}}
+\end{minipage}
+\end{center}
+}
+\subsubsection{Tiến trình tuần lộc}
+Tiến trình tuần lộc là tiến trình đơn giản nhất trong số 3 tiến trình: ông già Noel, tuần lộc và yêu tinh. Công việc của tuần lộc chỉ bao gồm:
+\begin{itemize}
+	\item Đợi ở đèn báo {\tt reindeerSem}.
+	\item Nếu chú tuần lộc thứ 9 đến, nó đánh thức ông già Noel. Sau đó, ông già Noel đánh thức cả 9 chú tuần lộc và chúng được buộc vào xe trượt tuyết.
+\end{itemize}
+Mã nguồn của tiến trình tuần lộc được viết như sau:
+\textsf{
+\begin{center}
+\begin{minipage}[t]{.33\linewidth}
+	\begin{center}
+		{\bfseries Reindeer's code}
+	\end{center}
+	\fcolorbox{black}{light-gray}{
+	\begin{minipage}[t]{\linewidth}
+	mutex.wait()\\
+	\hspace*{10pt}reindeer += 1\\
+	\hspace*{10pt}if (reindeer == 9)\\
+	\hspace*{20pt}santaSem.signal()\\
+	mutex.signal()\\
+	reindeerSem.wait()\\
+	getHitched()
+	\end{minipage}	
+	}
+\end{minipage}
+\end{center}
+}
+\subsubsection{Tiến trình yêu tinh}
+Tiến trình yêu tinh hoạt động tương tự như tiến trình tuần lộc ngoại trừ ràng buộc: khi có 3 yêu tinh đang được ông già Noel giúp đỡ, các yêu tinh khác cần giúp đỡ phải chờ cho đến khi 3 yêu tinh kia trở về.\\
+Mã nguồn:
+\textsf{
+\begin{center}
+\begin{minipage}[t]{.33\linewidth}
+	\begin{center}
+		{\bfseries Elf's code}
+	\end{center}
+	\fcolorbox{black}{light-gray}{
+	\begin{minipage}[t]{\linewidth}
+	elfTex.wait()\\
+	mutex.wait()\{\\
+	\hspace*{10pt}elves += 1\\
+	\hspace*{10pt}if (elves == 3)\\
+	\hspace*{20pt}santaSem.signal()\\
+	\hspace*{10pt}else\\
+	\hspace*{20pt}elfTex.signal()\\
+	mutex.signal()\\[10pt]
+	getHelp()\\[10pt]
+	mutex.wait()\\
+	\hspace*{10pt}elves -= 1\\
+	\hspace*{10pt}if (elves == 0)\\
+	\hspace*{20pt}elfTex.signal()\\
+	mutex.signal()
+	\end{minipage}
+	}
+\end{minipage}
+\end{center}
+}
+\begin{itemize}
+\item 2 yêu tinh đầu tiên đến sẽ giải phóng đèn báo {\tt elfTex} ngay trước khi giải phóng đèn báo {\tt mutex}. Nhưng yêu tinh thứ 3 sẽ không giải phóng đèn báo {\tt elfTex} cho đến khi cả 3 yêu tinh đều đã được giúp đỡ. Điều này ngăn chặn các yêu tinh khác xin giúp đỡ trong khi 3 yêu tinh này đang được giúp đỡ.
+\item Yêu tinh cuối cùng rời khỏi sẽ giải phóng đèn báo {\tt elfTex} và cho phép các yêu tinh khác được phép xin giúp đỡ từ ông già Noel.
+\end{itemize}

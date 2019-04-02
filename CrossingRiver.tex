@@ -1,0 +1,92 @@
+\newpage
+\section{Bài toán qua sông}
+\subsection{Phát biểu bài toán}
+\begin{itemize}
+	\item Ở một vùng gần Redmon, Washington, có một con thuyền được sử dụng bởi cả các hackers của Linux và lập trình viên của Microsoft để qua sông.
+	\item Con thuyền chỉ chở được chính xác 4 người. Thuyền sẽ không thể đi nếu có nhiều hơn hay ít hơn 4 người.
+	\item Để đảm bảo sự an toàn của hành khách, thuyền không cho phép chở 1 hacker của Linux với 3 lập trình viên của Microsoft, cũng như 1 lập trình viên của Microsoft với 3 hackers của Linux. Tất cả các tổ hợp còn lại đều được phép.
+	\item Cần đảm bảo cả 4 người trong một tổ hợp thỏa mãn phải lên thuyền trước khi có bất kì người nào khác lên thuyền. Sau đó, một trong số 4 người sẽ là thuyền trưởng và lái con thuyền qua sông. 
+\end{itemize}
+\subsection{Ý nghĩa của bài toán}
+Bài toán người qua sông thuộc lớp bài toán ít kinh điển hơn về đồng bộ hóa tiến trình. Bài toán này là một trường hợp cụ thể của các bài toán tổng quát về barrier và queue. Yêu cầu của bài toán là chỉ cho phép các tổ hợp tiến trình phù hợp được phép đi qua. Ràng buộc này khá giống với bài toán ông già Noel nhưng khác nhau ở chỗ tổ hợp các tiến trình trong bài toán này có thể bao gồm các tiến trình thuộc nhiều loại khác nhau. Bài toán này miêu tả vấn đề thực tế sau đây:
+\begin{itemize}
+	\item Trong hệ thống có một số lượng các tiến trình thuộc nhiều loại khác nhau đang chờ được thực thi.
+	\item Giả sử lúc đầu không tồn tại một tổ hợp tiến trình nào thỏa mãn để có thể được thực thi, các tiến trình phải xếp hàng trong một hàng đợi tương ứng với kiểu của mình. 
+	\item Trong khi các tiến trình đang chờ đợi, các tiến trình mới có thể xuất hiện và yêu cầu được thực thi. Các tiến trình mới xuất hiện này sẽ tạo nên các tổ hợp thỏa mãn. 
+	\item Mỗi khi một tiến trình mới xuất hiện, nó kiểm tra xem liệu nó cùng với các tiến trình hiện đang ở trong hàng đợi có tạo thành một tổ hợp thỏa mãn hay không. 
+	\item Nếu tìm được một tổ hợp, tiến trình mới đến sẽ đánh thức tất cả các tiến trình trong tổ hợp thỏa mãn này, cho phép tất cả được thực thi và chặn tất cả các tiến trình khác trong khi tổ hợp này chưa hoạt động xong.
+	\item Ngược lại, nếu không tìm được tổ hợp nào thỏa mãn, tiến trình mới đến xếp vào cuối hàng đợi tương ứng với kiểu của mình. 
+\end{itemize}
+Bài toán thực tế trên đây được phát biểu bằng một cách dễ hiểu và trực quan hơn thông qua bài toán qua sông, trong đó:
+\begin{itemize}
+	\item Hackers của Linux và lập trình viên của Microsoft đại diện cho 2 loại tiến trình đang có mặt trong hệ thống.
+	\item Con thuyền qua sông biểu diễn cho hoạt động của một tổ hợp tiến trình được phép hoạt động.
+	\item Các hàng đợi tiến trình tương ứng với hàng hackers của Linux và lập trình viên của Microsoft đợi lên thuyền.
+\end{itemize}
+\subsection{Giải quyết bài toán}
+Chúng ta cần tìm cách để đáp ứng được các ràng buộc của bài toán. Trong giải pháp đưa ra dưới đây, chúng ta sẽ sử dụng các biến và đèn báo sau:
+\textsf{
+\begin{center}
+\fcolorbox{black}{light-gray}{
+\begin{minipage}[t]{.3\linewidth}
+	barrier = Barrier(4)\\
+	mutex = Semaphore(1)\\
+	hackers = 0\\
+	serfs = 0\\
+	hackerQueue = Semaphore(0)\\
+	serfQueue = Semaphore(0)\\
+	Local isCaptain = false
+\end{minipage}}
+\end{center}
+}
+\begin{itemize}
+	\item {\tt barrier} là một rào chắn đảm bảo cho các hành khách đi qua chỉ khi số lượng đạt đủ 4.
+	\item Đèn báo {\tt mutex} dùng để bảo vệ các biến {\tt hackers} và {\tt serfs}.
+	\item Biến đếm {\tt hackers} và {\tt serfs} dùng để đếm số lượng các hackers và lập trình viên.
+	\item Nếu một hành khách đến mà chưa tìm thấy tổ hợp nào phù hợp để có thể qua sông, hành khách này phải đợi ở hàng đợi tương ứng với kiểu của mình. 2 đèn báo {\tt hackerQueue} và {\tt serfQueue} được sử dụng để quản lý 2 hàng đợi hacker và lập trình viên tương ứng. 
+	\item Mỗi hành khách đến sẽ có một trạng thái cục bộ {\tt isCaptain}. Biến logic này chỉ ra liệu hành khách này có phải là thuyền trưởng của con thuyền hay không (thuyền trưởng là người đến cuối cùng, đánh thức 3 người còn lại và lái thuyền qua sông).
+\end{itemize}
+Các hành khách thuộc kiểu hacker và kiểu lập trình viên có vai trò tương đương nhau trong bài toán này. Do đó, mã của hai kiểu tiến trình này là hoàn toàn đối xứng. Dưới đây là mã nguồn của tiến trình kiểu hacker Linux:
+\textsf{
+\begin{center}
+\begin{minipage}[t]{.5\linewidth}
+	\begin{center}
+		{\bfseries Hacker Linux's code}
+	\end{center}
+	\fcolorbox{black}{light-gray}{
+	\begin{minipage}[t]{\linewidth}
+	mutex.wait()\\
+	\hspace*{10pt}hackers += 1\\
+	\hspace*{10pt}if (hackers == 4)\{\\
+	\hspace*{20pt}hackerQueue.signal(4)\\
+	\hspace*{20pt}hackers = 0\\
+	\hspace*{20pt}isCaptain = true\\
+	\hspace*{10pt}\}\\
+	\hspace*{10pt}else if (hackers == 2 \&\& serfs $\geq$ 2)\{\\
+	\hspace*{20pt}hackerQueue.signal(2)\\
+	\hspace*{20pt}serfQueue.signal(2)\\
+	\hspace*{20pt}hackers = 0\\
+	\hspace*{20pt}serfs -= 2\\
+	\hspace*{20pt}isCaptain = true\\
+	\hspace*{10pt}\}\\
+	\hspace*{10pt}else\\
+	\hspace*{20pt}mutex.signal()\\[5pt]
+	hackerQueue.wait()\\[5pt]
+	board()\\
+	barrier.wait()\\[5pt]
+	if (isCaptain)\{\\
+	\hspace*{10pt}rowBoat()\\
+	\hspace*{10pt}mutex.signal()
+	\end{minipage}
+	}
+\end{minipage}
+\end{center}
+}
+\begin{itemize}
+	\item Đầu tiên, khi một tiến trình {\sf\bfseries Hacker Linux} đến, nó cần phải kiểm tra xem đèn báo {\tt mutex} có đang tự do hay không. Nếu có, tiến trình chiếm đèn báo {\tt mutex}, ngược lại, nó bị chặn tại vị trí này.
+	\item Sau khi chiếm đèn báo {\tt mutex}, tiến trình tăng biến đếm {\tt hackers} lên 1.
+	\item Sau đó, tiến trình kiểm tra xem có tổ hợp nào phù hợp để có thể lên thuyền hay không. Nếu có, nó đánh thức 3 tiến trình phù hợp và gán cho mình chức thuyền trưởng. Ngược lại, nó sẽ giải phóng đèn báo {\tt mutex}.
+	\item Nếu tiến trình chưa tìm được tổ hợp nào phù hợp, bước tiếp theo nó sẽ phải đợi ở đèn báo {\tt hackerQueue}. 
+	\item Sau khi có một tiến trình phù hợp đánh thức 3 tiến trình khác để tạo thành một tổ hợp thỏa mãn, cả 4 tiến trình cùng đi lên thuyền. Tiến trình nào lên trước sẽ phải đợi tại rào chắn {\tt barrier} cho đến khi cả 4 tiến trình đều đã lên thuyền.
+	\item Sau khi cả 4 tiến trình đều đã lên thuyền, tiến trình thuyền trưởng sẽ lái thuyền sang sông và sau đó giải phóng đèn báo {\tt mutex}. Trước khi con thuyền qua sông, đèn báo {\tt mutex} ngăn chặn tất cả các tiến trình khác khỏi việc lên thuyền.
+\end{itemize}
